@@ -10,12 +10,15 @@ import android.os.AsyncTask
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
+import kotlin.math.sin
 import kotlinx.android.synthetic.main.activity_main.*
 import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.MulticastSocket
 import java.nio.ByteBuffer
-import kotlin.math.sin
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -90,58 +93,89 @@ class MainActivity : AppCompatActivity() {
                 logId.append("Esperando Recepcion\n")
                 progressDialog.dismiss()
 
-                while(!mStop) {
+                while(!mStop)
+                {
                     val datoCrudo = receive(s)
-//                    var tb=0
 
-                    var guitarra:ShortArray=ShortArray(1000)
-                    var bajo:ShortArray=ShortArray(1000)
-                    var voz1:ShortArray=ShortArray(1000)
-                    var voz2:ShortArray=ShortArray(1000)
-//                    logId.append("hasta aca\n")
-//                    logId.append("$datoCrudo\n")
-                    for(index in 0 .. datoCrudo.size-10 step 9){
-//                        var indp = index/9
-                        guitarra[datoCrudo[index].toInt()]= (ByteBuffer.wrap(datoCrudo,index+1,2).short - 2047).toShort()
-                        bajo[datoCrudo[index].toInt()]= (ByteBuffer.wrap(datoCrudo,index+3,2).short - 2047).toShort()
-                        voz1[datoCrudo[index].toInt()]= (ByteBuffer.wrap(datoCrudo,index+5,2).short - 2047).toShort()
-                        voz2[datoCrudo[index].toInt()]= (ByteBuffer.wrap(datoCrudo,index+7,2).short - 2047).toShort()
-//                        tb++
+                    var canal1:ShortArray=ShortArray(1000)
+                    var canal2:ShortArray=ShortArray(1000)
+                    var canal3:ShortArray=ShortArray(1000)
+                    var canal4:ShortArray=ShortArray(1000)
+
+                    //Todo: Agregar encabezado que traiga informacion desde la rasp
+                    //Todo: Si la informacion traida modifica alguno de los textos, disparar la funcion "updateInfo"
+
+                    if (datoCrudo[0] < 240)
+                    {
+                        for(index in 0 .. datoCrudo.size-10 step 9)
+                        {
+                            canal1[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 1, 2).short - 2047).toShort()
+                            canal2[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 3, 2).short - 2047).toShort()
+                            canal3[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 5, 2).short - 2047).toShort()
+                            canal4[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 7, 2).short - 2047).toShort()
+                        }
+                        var bufSin= ShortArray(1000)
+                        logId.append("Agregar 1000 muestras al Buffer\n")
+                        //
+                        for (i:Int in bufSin.indices)
+                        {
+                            if(switch1.isChecked){
+
+                                bufSin[i]=((bufSin[i]+canal1[i]*seekBar1.progress)/10).toShort()
+                            }
+                            if(switch2.isChecked){
+
+                                bufSin[i]=((bufSin[i]+canal2[i]*seekBar2.progress)/10).toShort()
+                            }
+                            if(switch3.isChecked){
+
+                                bufSin[i]=((bufSin[i]+canal3[i]*seekBar3.progress)/10).toShort()
+                            }
+                            if(switch4.isChecked){
+
+                                bufSin[i]=((bufSin[i]+canal4[i]*seekBar4.progress)/10).toShort()
+                            }
+                        }
+                        //                val bufSin = createSinWaveBuffer(30.0, 1000)
+                        mAudioTrack.write(bufSin,0, bufSin.size)
+    //                    logId.append("canal 1 tiene: ${canal1.toString()}\n")
+    //                    logId.append("canal 2 tiene: ${canal2.toString()}\n")
+    //                    logId.append("canal 3 tiene: ${canal3.toString()}\n")
+    //                    logId.append("canal 4 tiene: ${canal4.toString()}\n")
                     }
-                    var bufSin= ShortArray(1000)
-                    logId.append("Agregar 1000 muestras al Buffer\n")
-                    //
-                    for (i:Int in bufSin.indices) {
-                        if(switch1.isChecked){
+                    else
+                    {
+                        when (datoCrudo[0].toInt())
+                        {
+                            //Cambio de titulo general
+                            240 -> textView.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            //Cambio nombre Canal1
+                            241 -> switch1.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            //Cambio nombre Canal2
+                            242 -> switch2.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            //Cambio nombre Canal3
+                            243 -> switch3.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            //Cambio nombre Canal4
+                            244 -> switch4.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
 
-                            bufSin[i]=((bufSin[i]+guitarra[i]*seekBar1.progress)/10).toShort()
-                        }
-                        if(switch2.isChecked){
+                            //Todo: Quiza poner un numero de una toast?
 
-                            bufSin[i]=((bufSin[i]+bajo[i]*seekBar2.progress)/10).toShort()
+                            else -> logId.append("Codigo de servicio incorrecto " + datoCrudo[0].toString() + "\n")
                         }
-                        if(switch3.isChecked){
-
-                            bufSin[i]=((bufSin[i]+voz1[i]*seekBar3.progress)/10).toShort()
-                        }
-                        if(switch4.isChecked){
-
-                            bufSin[i]=((bufSin[i]+voz2[i]*seekBar4.progress)/10).toShort()
-                        }
-//                    bufSin[i] = (bufSin1[i]*0.5+bufSin2[i] + bufSin3[i] + bufSin4[i]).toByte()
                     }
-                    //                val bufSin = createSinWaveBuffer(30.0, 1000)
-                    mAudioTrack.write(bufSin,0, bufSin.size)
-//                    logId.append("canal 1 tiene: ${guitarra.toString()}\n")
-//                    logId.append("canal 2 tiene: ${bajo.toString()}\n")
-//                    logId.append("canal 3 tiene: ${voz1.toString()}\n")
-//                    logId.append("canal 4 tiene: ${voz2.toString()}\n")
+
                 }
 
                 return "terminamo"//response.body?.string().toString()
-            }else{
+
+            }
+            else
+            {
+                //Todo: Si no esta conectado a la red saltar el cartel de conectarse de nuevo
                 return ""
             }
+
+
         }
 
         override fun onPostExecute(result: String?) {
@@ -150,13 +184,16 @@ class MainActivity : AppCompatActivity() {
 
             if (hasInternet){
                 logId.append(result)
-            }else{
+            }
+            else
+            {
                 logId.append("No internet")
             }
         }
 
 
     }
+
 
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager =
@@ -182,7 +219,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    fun stop() {
+    fun stop(view: View) {
 
         logId.append("Stop\n")
         mStop = true;
