@@ -1,23 +1,24 @@
 package com.example.conexionmasstream
 
+import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
 import android.os.AsyncTask
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
-import kotlin.math.sin
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.MulticastSocket
 import java.nio.ByteBuffer
-
+import kotlin.math.sin
 
 
 class MainActivity : AppCompatActivity() {
@@ -30,9 +31,11 @@ class MainActivity : AppCompatActivity() {
 
 
 
-    var mAudioTrack: AudioTrack = AudioTrack(AudioManager.STREAM_MUSIC,44100, AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT, 16000,
-            AudioTrack.MODE_STREAM)
+    var mAudioTrack: AudioTrack = AudioTrack(
+        AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_MONO,
+        AudioFormat.ENCODING_PCM_16BIT, 16000,
+        AudioTrack.MODE_STREAM
+    )
 
     lateinit var context: Context
 
@@ -45,15 +48,38 @@ class MainActivity : AppCompatActivity() {
 
         //        Thread.sleep(2000)
         mAudioTrack = AudioTrack(
-                AudioManager.STREAM_MUSIC,44100, AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT, 300000,
-                AudioTrack.MODE_STREAM)
+            AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT, 300000,
+            AudioTrack.MODE_STREAM
+        )
         logId.append("\n")
-        if(switch1.isChecked){
-            logId.append("Guitarra on\n")
-        }else {
-            logId.append("Guitarra off\n")
-        }
+
+        // Verifico que la red sea la correspondiente
+        val wifiManager =  getApplicationContext().getSystemService (WIFI_SERVICE) as WifiManager
+        val info = wifiManager.connectionInfo
+        val ssid = info.ssid
+        /*if (ssid. )
+        {
+            openDialog()
+        }*/
+
+
+        if(switch1.isChecked)
+        { logId.append("Canal 1: ON\n") }
+        else { logId.append("Canal 1: OFF\n") }
+
+        if(switch2.isChecked)
+        { logId.append("Canal 2: ON\n") }
+        else { logId.append("Canal 2: OFF\n") }
+
+        if(switch3.isChecked)
+        { logId.append("Canal 3: ON\n") }
+        else { logId.append("Canal 3: OFF\n") }
+
+        if(switch4.isChecked)
+        { logId.append("Canal 4: ON\n") }
+        else { logId.append("Canal 4: OFF\n") }
+
         val aux1:ByteArray= ByteArray(2)
         aux1[0]=1
         aux1[1]=60
@@ -61,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         aux3= ByteBuffer.wrap(aux1).short
         logId.append("$aux3 \n")
     }
+
     internal inner class getQuestions : AsyncTask<Void, Void, String>() {
 
         lateinit var progressDialog: ProgressDialog
@@ -109,10 +136,26 @@ class MainActivity : AppCompatActivity() {
                     {
                         for(index in 0 .. datoCrudo.size-10 step 9)
                         {
-                            canal1[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 1, 2).short - 2047).toShort()
-                            canal2[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 3, 2).short - 2047).toShort()
-                            canal3[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 5, 2).short - 2047).toShort()
-                            canal4[datoCrudo[index].toInt()] = (ByteBuffer.wrap(datoCrudo, index + 7, 2).short - 2047).toShort()
+                            canal1[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
+                                datoCrudo,
+                                index + 1,
+                                2
+                            ).short - 2047).toShort()
+                            canal2[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
+                                datoCrudo,
+                                index + 3,
+                                2
+                            ).short - 2047).toShort()
+                            canal3[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
+                                datoCrudo,
+                                index + 5,
+                                2
+                            ).short - 2047).toShort()
+                            canal4[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
+                                datoCrudo,
+                                index + 7,
+                                2
+                            ).short - 2047).toShort()
                         }
                         var bufSin= ShortArray(1000)
                         logId.append("Agregar 1000 muestras al Buffer\n")
@@ -137,7 +180,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         //                val bufSin = createSinWaveBuffer(30.0, 1000)
-                        mAudioTrack.write(bufSin,0, bufSin.size)
+                        mAudioTrack.write(bufSin, 0, bufSin.size)
     //                    logId.append("canal 1 tiene: ${canal1.toString()}\n")
     //                    logId.append("canal 2 tiene: ${canal2.toString()}\n")
     //                    logId.append("canal 3 tiene: ${canal3.toString()}\n")
@@ -148,15 +191,35 @@ class MainActivity : AppCompatActivity() {
                         when (datoCrudo[0].toInt())
                         {
                             //Cambio de titulo general
-                            240 -> textView.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            240 -> textView.text = ((ByteBuffer.wrap(
+                                datoCrudo,
+                                datoCrudo[0] + 1,
+                                datoCrudo.size
+                            )).toString())
                             //Cambio nombre Canal1
-                            241 -> switch1.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            241 -> switch1.text = ((ByteBuffer.wrap(
+                                datoCrudo,
+                                datoCrudo[0] + 1,
+                                datoCrudo.size
+                            )).toString())
                             //Cambio nombre Canal2
-                            242 -> switch2.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            242 -> switch2.text = ((ByteBuffer.wrap(
+                                datoCrudo,
+                                datoCrudo[0] + 1,
+                                datoCrudo.size
+                            )).toString())
                             //Cambio nombre Canal3
-                            243 -> switch3.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            243 -> switch3.text = ((ByteBuffer.wrap(
+                                datoCrudo,
+                                datoCrudo[0] + 1,
+                                datoCrudo.size
+                            )).toString())
                             //Cambio nombre Canal4
-                            244 -> switch4.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+                            244 -> switch4.text = ((ByteBuffer.wrap(
+                                datoCrudo,
+                                datoCrudo[0] + 1,
+                                datoCrudo.size
+                            )).toString())
 
                             //Todo: Quiza poner un numero de una toast?
 
@@ -200,8 +263,6 @@ class MainActivity : AppCompatActivity() {
                 getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val activeNetworkInfo = connectivityManager.activeNetworkInfo
         return activeNetworkInfo != null && activeNetworkInfo.isConnected
-
-
     }
 
     //s:MulticastSocket
@@ -233,8 +294,34 @@ class MainActivity : AppCompatActivity() {
 
         /* 8000 bytes per second*/
         mAudioTrack.play();
+    }
 
+    fun test(view: View) {
 
+        openDialog()
+
+        //Cambio de titulo general
+        textView.text = ("Los de").toString()
+        //Cambio nombre Canal1
+        switch1.text = ("chaca son").toString()
+        //Cambio nombre Canal2
+        switch2.text = ("todos").toString()
+        //Cambio nombre Canal3
+        switch3.text = ("putos").toString()
+        //Cambio nombre Canal4
+        //244 -> switch4.text = ((ByteBuffer.wrap(datoCrudo, datoCrudo[0] + 1, datoCrudo.size)).toString())
+         
+    }
+
+    fun openDialog(){
+        val dialogo = AlertDialog.Builder(this)
+        dialogo.setTitle("Conexion WIFI ausente")
+        dialogo.setMessage(
+            "Por favor conectese a la red correspondiende\nNombre:\"Los de Chaca son\"\nPass: \"Todo_putos\"" +
+                    "\n\nLa contraseña es sin espacios y sin comillas. Por favor loguee en la red correspondiente para recibir el streaming"
+        )
+        dialogo.setNeutralButton("Ok", { dialogInterface: DialogInterface, i: Int -> })
+        dialogo.show()
     }
 
     private fun createSinWaveBuffer(freq: Double, ms: Int, sampleRate: Int = 44100): ShortArray {
@@ -250,7 +337,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun mas(view: View) {
-        Thread(Runnable{
+        Thread(Runnable {
             this.runOnUiThread(java.lang.Runnable {
                 Thread.currentThread().priority = Thread.MIN_PRIORITY;
 //                while(!mStop) {

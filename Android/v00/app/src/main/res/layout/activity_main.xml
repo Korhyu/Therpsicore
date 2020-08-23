@@ -27,8 +27,8 @@
         android:layout_width="88dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:onClick="stop"
-        android:text="Stop"
+        android:onClick="test"
+        android:text="Test"
         app:layout_constraintStart_toStartOf="@+id/guideline4"
         app:layout_constraintTop_toTopOf="@+id/guideline" />
 
