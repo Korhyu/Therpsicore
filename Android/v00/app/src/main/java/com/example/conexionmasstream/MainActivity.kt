@@ -7,38 +7,52 @@ import android.content.DialogInterface
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.AudioTrack.WRITE_BLOCKING
+import android.media.AudioTrack.WRITE_NON_BLOCKING
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.AsyncTask
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Process.THREAD_PRIORITY_AUDIO
+import android.os.Process.setThreadPriority
 import android.view.View
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.MulticastSocket
 import java.nio.ByteBuffer
+import kotlin.concurrent.thread
 import kotlin.math.sin
 
 
 class MainActivity : AppCompatActivity() {
 
     private var mStop: Boolean = false
-    private val bufSin1 = createSinWaveBuffer(30.0, 1000)
+    private val bufSin1 = createSinWaveBuffer(3000.0, 1000)
     private val bufSin2 = createSinWaveBuffer(300.0, 1000)
     private val bufSin3 = createSinWaveBuffer(3000.0, 1000)
     private val bufSin4 = createSinWaveBuffer(30000.0, 1000)
+    private var bufSin= ShortArray(1000)
+    private var auxWrite=0
+    private var auxCount=0
 
+//    val buferasd = AudioTrack.getMinBufferSize(48000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
-
-    var mAudioTrack: AudioTrack = AudioTrack(
-        AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_MONO,
-        AudioFormat.ENCODING_PCM_16BIT, 16000,
+    var mAudioTrack = AudioTrack(
+        AudioManager.STREAM_MUSIC, 48000, AudioFormat.CHANNEL_OUT_MONO,
+        AudioFormat.ENCODING_PCM_16BIT, 30000,
         AudioTrack.MODE_STREAM
     )
 
+
+
     lateinit var context: Context
 
+    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -47,12 +61,32 @@ class MainActivity : AppCompatActivity() {
         getQuestions().execute()
 
         //        Thread.sleep(2000)
-        mAudioTrack = AudioTrack(
-            AudioManager.STREAM_MUSIC, 44100, AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT, 300000,
-            AudioTrack.MODE_STREAM
-        )
+
         logId.append("\n")
+
+
+
+        thread(start = true, priority = THREAD_PRIORITY_AUDIO){
+//            var threadId = Thread.currentThread().getId().toInt()
+//            setThreadPriority(threadId , -19)
+            println("${Thread.currentThread()} has run.")
+            logId.append("iniciando Hilo\n")
+            var auxCount1 = 0
+            var ee1 = 0
+            while(!mStop){
+                if(auxWrite==1){
+                    ee1 = mAudioTrack.write(bufSin, 0, 500) //bufSin
+                    Thread.sleep(1)
+//                    logId.append("$ee1\n")
+//                    auxCount1 += 255
+//                    if(auxCount1>=(bufSin1.size - 255)){
+//                        auxCount1=0
+                    }
+
+                    auxWrite=0
+//                }
+            }
+        }
 
         // Verifico que la red sea la correspondiente
         val wifiManager =  getApplicationContext().getSystemService (WIFI_SERVICE) as WifiManager
@@ -101,6 +135,7 @@ class MainActivity : AppCompatActivity() {
             progressDialog.show()
         }
 
+        @RequiresApi(Build.VERSION_CODES.M)
         override fun doInBackground(vararg p0: Void?): String {
             if (isNetworkAvailable()){
                 hasInternet=true
@@ -120,71 +155,55 @@ class MainActivity : AppCompatActivity() {
                 logId.append("Esperando Recepcion\n")
                 progressDialog.dismiss()
 
+                var datoCrudo = ByteArray(1024*2)
                 while(!mStop)
                 {
-                    val datoCrudo = receive(s)
+                    if(auxWrite==0) {
+                        datoCrudo = receive(s)//ByteArray(1024*2)
+                    }
+//                    mAudioTrack.write(bufSin1, 0, 3000, WRITE_BLOCKING) //bufSin
+//                    Thread.sleep(4)
 
-                    var canal1:ShortArray=ShortArray(1000)
-                    var canal2:ShortArray=ShortArray(1000)
-                    var canal3:ShortArray=ShortArray(1000)
-                    var canal4:ShortArray=ShortArray(1000)
 
                     //Todo: Agregar encabezado que traiga informacion desde la rasp
-                    //Todo: Si la informacion traida modifica alguno de los textos, disparar la funcion "updateInfo"
+                    //Todo: Si la informacion traida modifica alguno de los textos, disparar la funcion "updateInfo"||
 
                     if (datoCrudo[0] < 240)
                     {
-                        for(index in 0 .. datoCrudo.size-10 step 9)
-                        {
-                            canal1[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
-                                datoCrudo,
-                                index + 1,
-                                2
-                            ).short - 2047).toShort()
-                            canal2[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
-                                datoCrudo,
-                                index + 3,
-                                2
-                            ).short - 2047).toShort()
-                            canal3[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
-                                datoCrudo,
-                                index + 5,
-                                2
-                            ).short - 2047).toShort()
-                            canal4[datoCrudo[index].toInt()] = (ByteBuffer.wrap(
-                                datoCrudo,
-                                index + 7,
-                                2
-                            ).short - 2047).toShort()
-                        }
-                        var bufSin= ShortArray(1000)
-                        logId.append("Agregar 1000 muestras al Buffer\n")
-                        //
-                        for (i:Int in bufSin.indices)
-                        {
-                            if(switch1.isChecked){
 
-                                bufSin[i]=((bufSin[i]+canal1[i]*seekBar1.progress)/10).toShort()
-                            }
-                            if(switch2.isChecked){
+                            var count = 0;
 
-                                bufSin[i]=((bufSin[i]+canal2[i]*seekBar2.progress)/10).toShort()
-                            }
-                            if(switch3.isChecked){
+                            for (index in 2..datoCrudo.size - 8 step 8) {
+                                bufSin[count] = 0
+                                if (switch1.isChecked) {
 
-                                bufSin[i]=((bufSin[i]+canal3[i]*seekBar3.progress)/10).toShort()
-                            }
-                            if(switch4.isChecked){
+                                    bufSin[count] = ((bufSin[count] + (datoCrudo[index].toUByte()
+                                        .toInt() + (datoCrudo[index + 1].toInt() shl 8) - 2047).toShort() * seekBar1.progress) / 10).toShort()
+                                }
+                                if (switch2.isChecked) {
 
-                                bufSin[i]=((bufSin[i]+canal4[i]*seekBar4.progress)/10).toShort()
+                                    bufSin[count] =
+                                        ((bufSin[count] + (datoCrudo[index + 2].toUByte()
+                                            .toInt() + (datoCrudo[index + 3].toInt() shl 8) - 2047).toShort() * seekBar2.progress) / 10).toShort()
+                                }
+                                if (switch3.isChecked) {
+
+                                    bufSin[count] =
+                                        ((bufSin[count] + (datoCrudo[index + 4].toUByte()
+                                            .toInt() + (datoCrudo[index + 5].toInt() shl 8) - 2047).toShort() * seekBar3.progress) / 10).toShort()
+                                }
+                                if (switch4.isChecked) {
+
+                                    bufSin[count] =
+                                        ((bufSin[count] + (datoCrudo[index + 6].toUByte()
+                                            .toInt() + (datoCrudo[index + 7].toInt() shl 8) - 2047).toShort() * seekBar4.progress) / 10).toShort()
+                                }
+                                count++
                             }
-                        }
-                        //                val bufSin = createSinWaveBuffer(30.0, 1000)
-                        mAudioTrack.write(bufSin, 0, bufSin.size)
-    //                    logId.append("canal 1 tiene: ${canal1.toString()}\n")
-    //                    logId.append("canal 2 tiene: ${canal2.toString()}\n")
-    //                    logId.append("canal 3 tiene: ${canal3.toString()}\n")
-    //                    logId.append("canal 4 tiene: ${canal4.toString()}\n")
+                            auxCount = count
+                            auxWrite = 1
+                            logId.append("Agregar 1000 muestras al Buffer\n")
+
                     }
                     else
                     {
@@ -268,7 +287,7 @@ class MainActivity : AppCompatActivity() {
     //s:MulticastSocket
     fun receive(s: MulticastSocket):ByteArray {
         // get their responses!
-        val buf:ByteArray = ByteArray(1000)
+        val buf:ByteArray = ByteArray(1024*2)
         val recv = DatagramPacket(buf, buf.size)
         //tvResult.append("Esperando Recepcion\n")
         s.receive(recv);
@@ -324,7 +343,7 @@ class MainActivity : AppCompatActivity() {
         dialogo.show()
     }
 
-    private fun createSinWaveBuffer(freq: Double, ms: Int, sampleRate: Int = 44100): ShortArray {
+    private fun createSinWaveBuffer(freq: Double, ms: Int, sampleRate: Int = 48000): ShortArray {
         val samples = (ms * sampleRate / 1000)
         val output = ShortArray(samples)
         val period = sampleRate.toDouble() / freq
@@ -372,6 +391,36 @@ class MainActivity : AppCompatActivity() {
             })
         }).start()
     }
+
+//    fun thread(
+//        start: Boolean = true,
+//        isDaemon: Boolean = false,
+//        contextClassLoader: ClassLoader? = null,
+//        name: String? = null,
+//        priority: Int = -1,
+//        block: () -> Unit
+//    ): Thread {
+//        //            var threadId = Thread.currentThread().getId().toInt()
+////            setThreadPriority(threadId , -19)
+//        println("${Thread.currentThread()} has run.")
+//        logId.append("iniciando Hilo\n")
+//        var auxCount1 = 0
+//        var ee1 = 0
+//        while(!mStop){
+//            if(auxWrite==1){
+//                ee1 = mAudioTrack.write(bufSin, 0, 500) //bufSin
+//                Thread.sleep(1)
+////                    logId.append("$ee1\n")
+////                    auxCount1 += 255
+////                    if(auxCount1>=(bufSin1.size - 255)){
+////                        auxCount1=0
+//            }
+//
+//            auxWrite=0
+////                }
+//        }
+//
+//    }
 
 
 }
