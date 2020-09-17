@@ -7,16 +7,16 @@ import android.content.DialogInterface
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
-import android.media.AudioTrack.WRITE_BLOCKING
-import android.media.AudioTrack.WRITE_NON_BLOCKING
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
+import android.os.Process
 import android.os.Process.THREAD_PRIORITY_AUDIO
 import android.os.Process.setThreadPriority
+import android.util.Log
+import android.util.TimingLogger
 import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -25,6 +25,7 @@ import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.MulticastSocket
 import java.nio.ByteBuffer
+import java.util.concurrent.Semaphore
 import kotlin.concurrent.thread
 import kotlin.math.sin
 
@@ -36,15 +37,21 @@ class MainActivity : AppCompatActivity() {
     private val bufSin2 = createSinWaveBuffer(300.0, 1000)
     private val bufSin3 = createSinWaveBuffer(3000.0, 1000)
     private val bufSin4 = createSinWaveBuffer(30000.0, 1000)
-    private var bufSin= ShortArray(1000)
+    private var bufSin= ShortArray(5000)
+    private var bufSinn= ShortArray(5000)
     private var auxWrite=0
     private var auxCount=0
+
+
+    val defBuffer = 1024
+    val sem = Semaphore(1)
+    val sem2 = Semaphore(1)
 
 //    val buferasd = AudioTrack.getMinBufferSize(48000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
     var mAudioTrack = AudioTrack(
         AudioManager.STREAM_MUSIC, 48000, AudioFormat.CHANNEL_OUT_MONO,
-        AudioFormat.ENCODING_PCM_16BIT, 30000,
+        AudioFormat.ENCODING_PCM_16BIT, 60*16*2*2,
         AudioTrack.MODE_STREAM
     )
 
@@ -66,24 +73,78 @@ class MainActivity : AppCompatActivity() {
 
 
 
-        thread(start = true, priority = THREAD_PRIORITY_AUDIO){
+        thread(start = true, priority = THREAD_PRIORITY_AUDIO){  //THREAD_PRIORITY_AUDIO
 //            var threadId = Thread.currentThread().getId().toInt()
 //            setThreadPriority(threadId , -19)
             println("${Thread.currentThread()} has run.")
             logId.append("iniciando Hilo\n")
             var auxCount1 = 0
             var ee1 = 0
+            var datoCrudo = ByteArray(256*4*2)
+            var count = 0;
+
+                val startTime =   System.nanoTime()
+
+                bufSin[count] = ((bufSin[count] + (datoCrudo[1].toUByte().toInt() + (datoCrudo[1 + 1].toInt() shl 8) - 2047).toShort() *16* seekBar1.progress) / 10).toShort()
+
+                Log.e("Measure", "TASK took in Hilo : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+
+
+//            var datoCrudo = ByteArray(256*4*2)
+//            var count = 0;
+            //DO SOMETHING
+
+            for (index in 2..datoCrudo.size - 8 step 8) {
+                bufSin[count] = 0
+                if (switch1.isChecked) {
+
+                    bufSin[count] = ((bufSin[count] + (datoCrudo[index].toUByte()
+                        .toInt() + (datoCrudo[index + 1].toInt() shl 8) - 2047).toShort() *16* seekBar1.progress) / 10).toShort()
+                }
+                if (switch2.isChecked) {
+
+                    bufSin[count] =
+                        ((bufSin[count] + (datoCrudo[index + 2].toUByte()
+                            .toInt() + (datoCrudo[index + 3].toInt() shl 8) - 2047).toShort() *16* seekBar2.progress) / 10).toShort()
+                }
+                if (switch3.isChecked) {
+
+                    bufSin[count] =
+                        ((bufSin[count] + (datoCrudo[index + 4].toUByte()
+                            .toInt() + (datoCrudo[index + 5].toInt() shl 8) - 2047).toShort() *16* seekBar3.progress) / 10).toShort()
+                }
+                if (switch4.isChecked) {
+
+                    bufSin[count] =
+                        ((bufSin[count] + (datoCrudo[index + 6].toUByte()
+                            .toInt() + (datoCrudo[index + 7].toInt() shl 8) - 2047).toShort() *16* seekBar4.progress) / 10).toShort()
+                }
+                count++
+            }
+
+            mAudioTrack.write(bufSin1, 0, 60*16) //bufSin
+
             while(!mStop){
-                if(auxWrite==1){
-                    ee1 = mAudioTrack.write(bufSin, 0, 500) //bufSin
-                    Thread.sleep(1)
+//                if(auxWrite==1){
+                sem.acquireUninterruptibly()
+                    if(auxWrite==1) {
+                        auxWrite=0
+                        ee1 = mAudioTrack.write(bufSin, 0, defBuffer) //bufSin
+
+                    }else{
+                        auxWrite=1
+                        ee1 = mAudioTrack.write(bufSinn, 0, defBuffer) //bufSin
+
+                    }
+//                sem2.release()
+//                Thread.sleep(1)
 //                    logId.append("$ee1\n")
 //                    auxCount1 += 255
 //                    if(auxCount1>=(bufSin1.size - 255)){
 //                        auxCount1=0
-                    }
+//                    }
 
-                    auxWrite=0
+//                    auxWrite=0
 //                }
             }
         }
@@ -97,6 +158,49 @@ class MainActivity : AppCompatActivity() {
             openDialog()
         }*/
 
+
+        val startTime =   System.nanoTime()
+        var datoCrudo = ByteArray(256*4*2)
+        var count = 0;
+        //DO SOMETHING
+
+                                    for (index in 2..datoCrudo.size - 8 step 8) {
+                                bufSin[count] = 0
+                                if (switch1.isChecked) {
+
+                                    bufSin[count] = ((bufSin[count] + (datoCrudo[index].toUByte()
+                                        .toInt() + (datoCrudo[index + 1].toInt() shl 8) - 2047).toShort() *16* seekBar1.progress) / 10).toShort()
+                                }
+                                if (switch2.isChecked) {
+
+                                    bufSin[count] =
+                                        ((bufSin[count] + (datoCrudo[index + 2].toUByte()
+                                            .toInt() + (datoCrudo[index + 3].toInt() shl 8) - 2047).toShort() *16* seekBar2.progress) / 10).toShort()
+                                }
+                                if (switch3.isChecked) {
+
+                                    bufSin[count] =
+                                        ((bufSin[count] + (datoCrudo[index + 4].toUByte()
+                                            .toInt() + (datoCrudo[index + 5].toInt() shl 8) - 2047).toShort() *16* seekBar3.progress) / 10).toShort()
+                                }
+                                if (switch4.isChecked) {
+
+                                    bufSin[count] =
+                                        ((bufSin[count] + (datoCrudo[index + 6].toUByte()
+                                            .toInt() + (datoCrudo[index + 7].toInt() shl 8) - 2047).toShort() *16* seekBar4.progress) / 10).toShort()
+                                }
+                                count++
+                            }
+        Log.e("Measure", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+        mAudioTrack.write(bufSin1, 0, 60*16) //bufSin
+
+
+
+//        val startTime =   System.nanoTime()
+//
+//        //DO SOMETHING
+//
+//        Log.e("Measure", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
 
         if(switch1.isChecked)
         { logId.append("Canal 1: ON\n") }
@@ -114,12 +218,18 @@ class MainActivity : AppCompatActivity() {
         { logId.append("Canal 4: ON\n") }
         else { logId.append("Canal 4: OFF\n") }
 
+
+
+
+
         val aux1:ByteArray= ByteArray(2)
         aux1[0]=1
         aux1[1]=60
         var aux3:Short
         aux3= ByteBuffer.wrap(aux1).short
         logId.append("$aux3 \n")
+
+
     }
 
     internal inner class getQuestions : AsyncTask<Void, Void, String>() {
@@ -137,6 +247,7 @@ class MainActivity : AppCompatActivity() {
 
         @RequiresApi(Build.VERSION_CODES.M)
         override fun doInBackground(vararg p0: Void?): String {
+//            setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
             if (isNetworkAvailable()){
                 hasInternet=true
 //                val client = OkHttpClient()
@@ -155,14 +266,17 @@ class MainActivity : AppCompatActivity() {
                 logId.append("Esperando Recepcion\n")
                 progressDialog.dismiss()
 
-                var datoCrudo = ByteArray(1024*2)
+                val startTime =   System.nanoTime()
+                Log.e("Measure", "TASK took Async: " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+                var datoCrudo = ByteArray(2560*4*2)
                 while(!mStop)
                 {
-                    if(auxWrite==0) {
-                        datoCrudo = receive(s)//ByteArray(1024*2)
-                    }
+//                    if(auxWrite==0) {
+
+//                    datoCrudo = receive(s)//ByteArray(1024*2)
+//                    }
 //                    mAudioTrack.write(bufSin1, 0, 3000, WRITE_BLOCKING) //bufSin
-//                    Thread.sleep(4)
+                    Thread.sleep(18)
 
 
                     //Todo: Agregar encabezado que traiga informacion desde la rasp
@@ -171,38 +285,80 @@ class MainActivity : AppCompatActivity() {
                     if (datoCrudo[0] < 240)
                     {
 
-                            var count = 0;
 
+
+                            var count = 0;
+//                        sem2.acquireUninterruptibly()
+                        if(auxWrite==0) {
+//                            for (index in 2..datoCrudo.size - 8 step 8) {
+//                                bufSin[count] = 0
+//                                if (switch1.isChecked) {
+//
+//                                    bufSin[count] = ((bufSin[count] + (datoCrudo[index].toUByte()
+//                                        .toInt() + (datoCrudo[index + 1].toInt() shl 8) - 2047).toShort() *16* seekBar1.progress) / 10).toShort()
+//                                }
+//                                if (switch2.isChecked) {
+//
+//                                    bufSin[count] =
+//                                        ((bufSin[count] + (datoCrudo[index + 2].toUByte()
+//                                            .toInt() + (datoCrudo[index + 3].toInt() shl 8) - 2047).toShort() *16* seekBar2.progress) / 10).toShort()
+//                                }
+//                                if (switch3.isChecked) {
+//
+//                                    bufSin[count] =
+//                                        ((bufSin[count] + (datoCrudo[index + 4].toUByte()
+//                                            .toInt() + (datoCrudo[index + 5].toInt() shl 8) - 2047).toShort() *16* seekBar3.progress) / 10).toShort()
+//                                }
+//                                if (switch4.isChecked) {
+//
+//                                    bufSin[count] =
+//                                        ((bufSin[count] + (datoCrudo[index + 6].toUByte()
+//                                            .toInt() + (datoCrudo[index + 7].toInt() shl 8) - 2047).toShort() *16* seekBar4.progress) / 10).toShort()
+//                                }
+//                                count++
+//                            }
+//                            val startTime =   System.nanoTime()
+
+                            //DO SOMETHING
+
+
+                            mAudioTrack.write(bufSin1, 0, 60*16) //bufSin
+//                            Log.e("Measure", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+//                            auxWrite = 1
+//                            logId.append("Agregar 1000 muestras al Buffer\n")
+                        }
+                        else{
                             for (index in 2..datoCrudo.size - 8 step 8) {
-                                bufSin[count] = 0
+                                bufSinn[count] = 0
                                 if (switch1.isChecked) {
 
-                                    bufSin[count] = ((bufSin[count] + (datoCrudo[index].toUByte()
-                                        .toInt() + (datoCrudo[index + 1].toInt() shl 8) - 2047).toShort() * seekBar1.progress) / 10).toShort()
+                                    bufSinn[count] = ((bufSinn[count] + (datoCrudo[index].toUByte()
+                                        .toInt() + (datoCrudo[index + 1].toInt() shl 8) - 2047).toShort() *16* seekBar1.progress) / 10).toShort()
                                 }
                                 if (switch2.isChecked) {
 
-                                    bufSin[count] =
-                                        ((bufSin[count] + (datoCrudo[index + 2].toUByte()
-                                            .toInt() + (datoCrudo[index + 3].toInt() shl 8) - 2047).toShort() * seekBar2.progress) / 10).toShort()
+                                    bufSinn[count] =
+                                        ((bufSinn[count] + (datoCrudo[index + 2].toUByte()
+                                            .toInt() + (datoCrudo[index + 3].toInt() shl 8) - 2047).toShort() *16* seekBar2.progress) / 10).toShort()
                                 }
                                 if (switch3.isChecked) {
 
-                                    bufSin[count] =
-                                        ((bufSin[count] + (datoCrudo[index + 4].toUByte()
-                                            .toInt() + (datoCrudo[index + 5].toInt() shl 8) - 2047).toShort() * seekBar3.progress) / 10).toShort()
+                                    bufSinn[count] =
+                                        ((bufSinn[count] + (datoCrudo[index + 4].toUByte()
+                                            .toInt() + (datoCrudo[index + 5].toInt() shl 8) - 2047).toShort() *16* seekBar3.progress) / 10).toShort()
                                 }
                                 if (switch4.isChecked) {
 
-                                    bufSin[count] =
-                                        ((bufSin[count] + (datoCrudo[index + 6].toUByte()
-                                            .toInt() + (datoCrudo[index + 7].toInt() shl 8) - 2047).toShort() * seekBar4.progress) / 10).toShort()
+                                    bufSinn[count] =
+                                        ((bufSinn[count] + (datoCrudo[index + 6].toUByte()
+                                            .toInt() + (datoCrudo[index + 7].toInt() shl 8) - 2047).toShort() *16* seekBar4.progress) / 10).toShort()
                                 }
                                 count++
                             }
-                            auxCount = count
-                            auxWrite = 1
-                            logId.append("Agregar 1000 muestras al Buffer\n")
+                        }
+                        auxCount = count
+//                        sem.release()
+//                        Thread.sleep(1)
 
                     }
                     else
@@ -287,7 +443,7 @@ class MainActivity : AppCompatActivity() {
     //s:MulticastSocket
     fun receive(s: MulticastSocket):ByteArray {
         // get their responses!
-        val buf:ByteArray = ByteArray(1024*2)
+        val buf:ByteArray = ByteArray(defBuffer*4*2)
         val recv = DatagramPacket(buf, buf.size)
         //tvResult.append("Esperando Recepcion\n")
         s.receive(recv);
@@ -423,4 +579,126 @@ class MainActivity : AppCompatActivity() {
 //    }
 
 
+}
+
+fun check_buton():Int {
+    var opcion:Int=0
+    if (switch1.isChecked) {
+        if (switch2.isChecked){
+            if (switch3.isChecked){
+                if (switch4.isChecked){
+                    //TODOS
+                }else{
+                    //4 NO
+                }
+            }else{
+                if (switch4.isChecked){
+                    //3 NO
+                }else{
+                    //3 4 NO
+                }
+            }
+        }else{
+            if (switch3.isChecked){
+                if (switch4.isChecked){
+                    // 2 NO
+                }else{
+                    //2 4 NO
+                }
+            }else{
+                if (switch4.isChecked){
+                    // 2 3 NO
+                }else{
+                    // 2 3 4 NO
+                }
+            }
+        }
+    }else{
+        if (switch2.isChecked){
+            if (switch3.isChecked){
+                if (switch4.isChecked){
+                    //1 NO
+                }else{
+                    //1 4 NO
+                }
+            }else{
+                if (switch4.isChecked){
+                    // 1 3 NO
+                }else{
+                    //1 3 4 NO
+                }
+            }
+        }else{
+            if (switch3.isChecked){
+                if (switch4.isChecked){
+                    //1 2 NO
+                }else{
+                    //1 2 4 NO
+                }
+            }else{
+                if (switch4.isChecked){
+                    //1 2 3 NO
+                }else{
+                    //1 2 3 4 NO
+                }
+            }
+        }
+    }
+    return opcion
+}
+
+fun addAudioTrack(){
+    when (auxCheck) {
+        1 -> {
+
+        }
+        2 ->{
+
+        }
+        3 ->{
+
+        }
+        4 ->{
+
+        }
+        5 ->{
+
+        }
+        6 ->{
+
+        }
+        7 ->{
+
+        }
+        8 ->{
+
+        }
+        9 ->{
+
+        }
+        10 ->{
+
+        }
+        11 ->{
+
+        }
+        12 ->{
+
+        }
+        13 ->{
+
+        }
+        14 ->{
+
+        }
+        15 ->{
+
+        }
+        16 ->{
+
+        }
+        else -> { // Note the block
+            print("x is neither 1 nor 2")
+        }
+    }
 }
