@@ -3,11 +3,13 @@ package com.example.treshilosrxmixerplay
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Process.THREAD_PRIORITY_AUDIO
 import android.util.Log
 import android.view.View
+import androidx.annotation.RequiresApi
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlin.concurrent.thread
 import kotlin.math.sin
@@ -17,103 +19,212 @@ class MainActivity : AppCompatActivity() {
     private val power = 1
     private var bufferRx = ShortArray(RxMaxBuf)
     private var bufferPlay = ShortArray(RxMaxBuf)
-    private var prueba = ByteArray(16*16*2)
+    private var prueba = ByteArray(999)
     private var outBufferRx:Int=0
     private var inBufferRx:Int=0
     private var inBufferPlay:Int=0
     private var outBufferPlay:Int=0
-    private var check=1
+    private var check=12
+
+
+    var contador=0
+    var contadorPlayin=0
 
     var mAudioTrack = AudioTrack(
             AudioManager.STREAM_MUSIC, 48000, AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT, 2024,
+            AudioFormat.ENCODING_PCM_16BIT, 4000,
             AudioTrack.MODE_STREAM
     )
 
-    private val bufSin1 = createSinWaveBuffer(3000.0, 1000)
+    private val bufSin1 = createSinWaveBuffer(1000.0, 3000)
     private val bufSin2 = createSinWaveBuffer(6000.0, 1000)
     private val bufSin3 = createSinWaveBuffer(9000.0, 1000)
     private val bufSin4 = createSinWaveBuffer(12000.0, 1000)
 
+    @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         mAudioTrack.play();                 //mAudioTrack.stop();
+        var startTime = System.nanoTime()
+        mAudioTrack.write(bufSin1, 0, bufSin1.size,AudioTrack.WRITE_BLOCKING)
+        Log.e("Measure", "TASK took write 3seg: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
+//        startTime = System.nanoTime()
+//        mAudioTrack.write(bufSin1, 0, bufSin1.size,AudioTrack.WRITE_BLOCKING)
+//        Log.e("Measure", "TASK took write 3seg: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
+//        Log.e("INICIO", "Bufer " + bufferRx[0] + "\n")
 
-//        prueba[0] = 0x2
-//        prueba[1] = 0x2
-//        bufferRx[0] = (prueba[0].toShort() + (prueba[1].toInt() shl 8)).toShort()
-        Log.e("INICIO", "Bufer " + bufferRx[0] + "\n")
+//        thread(start = true, priority = 5) { //THREAD_PRIORITY_AUDIO
+//            while(power==1){
+//                mAudioTrack.write(bufSin1, 0, 480,AudioTrack.WRITE_BLOCKING)
+////                mAudioTrack.write(bufSin2, 0, bufSin2.size,AudioTrack.WRITE_BLOCKING)
+//            }
+//        }
+//        thread(start = true, priority = 5) { //THREAD_PRIORITY_AUDIO
+//            while(power==1){
+////                Thread.sleep(500)
+////                mAudioTrack.write(bufSin2, 0, bufSin2.size,AudioTrack.WRITE_BLOCKING)
+//                        var startTime = System.nanoTime()
+//        for (index in 0..999 step 1) {
+//            bufferRx[inBufferRx] = bufSin1[index]
+//            bufferRx[inBufferRx + 1] = bufSin2[index]
+//            bufferRx[inBufferRx + 2] = bufSin3[index]
+//            bufferRx[inBufferRx + 3] = bufSin4[index]
+//            inBufferRx += 4
+//            if (inBufferRx >= RxMaxBuf) {
+//                inBufferRx = 0
+//            }
+//        }
+//        Log.e("Measure", "TASK took for buffer sinwave: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
+//            }
+//        }
+
+//        var startTime = System.nanoTime()
+//        for (index in 0..999 step 1) {
+//            bufferRx[inBufferRx] = bufSin1[index]
+//            bufferRx[inBufferRx + 1] = bufSin2[index]
+//            bufferRx[inBufferRx + 2] = bufSin3[index]
+//            bufferRx[inBufferRx + 3] = bufSin4[index]
+//            inBufferRx += 4
+//            if (inBufferRx >= RxMaxBuf) {
+//                inBufferRx = 0
+//            }
+//        }
+//        Log.e("Measure", "TASK took for buffer sinwave: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
+//
+//        startTime = System.nanoTime()
+//        for (index in 0 .. prueba.size - 2 step 2) {
+//            bufferRx[inBufferRx] = (prueba[index].toShort() + (prueba[index + 1].toInt() shl 8)).toShort()
+//            inBufferRx++
+//            if (inBufferRx == RxMaxBuf) inBufferRx = 0
+//        }
+//        Log.e("Measure", "TASK took byte to short : " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
 
 
-        thread(start = true, priority = THREAD_PRIORITY_AUDIO) //THREAD_PRIORITY_AUDIO
+
+        thread(start = true, priority = 5) //THREAD_PRIORITY_AUDIO
         {
             Log.e("INICIO", "TASK Rx\n")
+            var aux=0
+//            bufferRx=bufSin1.copyOf(10000)
             while (power == 1) {
                 //recibo el bufferRx
-                Thread.sleep(4)
+//                val startTime = System.nanoTime()
+//                Thread.sleep(5)
+//                Log.e("Measure", "TASK took : " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
 //                val startTime = System.nanoTime()
 //                for (index in 0 .. prueba.size - 2 step 2) {
 //                    bufferRx[inBufferRx] = (prueba[index].toShort() + (prueba[index + 1].toInt() shl 8)).toShort()
 //                    inBufferRx++
 //                    if (inBufferRx == RxMaxBuf) inBufferRx = 0
 //                }
-                for (index in 0 .. prueba.size - 1 step 1) {
-                    bufferRx[inBufferRx]=bufSin1[index]
-                    inBufferRx++
-                    if (inBufferRx == RxMaxBuf) inBufferRx = 0
-                    bufferRx[inBufferRx]=bufSin2[index]
-                    inBufferRx++
-                    if (inBufferRx == RxMaxBuf) inBufferRx = 0
-                    bufferRx[inBufferRx]=bufSin3[index]
-                    inBufferRx++
-                    if (inBufferRx == RxMaxBuf) inBufferRx = 0
-                    bufferRx[inBufferRx]=bufSin4[index]
-                    inBufferRx++
-                    if (inBufferRx == RxMaxBuf) inBufferRx = 0
+
+//                inBufferRx+=999
+//                if (inBufferRx>=RxMaxBuf){inBufferRx=0}
+                var auxbufout = outBufferRx
+                if (((inBufferRx+(480*4)) > auxbufout ) && (inBufferRx < auxbufout)) {
+                    Log.e("ERROR", "ESTOY ALCANZANDO EL BUFFER RX\n")
+//                            Log.e("ERROR", "$inBufferRx $outBufferRx\n")
+                }
+                else {
+//                    var startTime = System.nanoTime()
+                    for (index in 0..480*4 step 1) {
+                        bufferRx[inBufferRx] = bufSin1[index]
+//                        bufferRx[inBufferRx + 1] = bufSin2[index]
+//                        bufferRx[inBufferRx + 2] = bufSin3[index]
+//                        bufferRx[inBufferRx + 3] = bufSin4[index]
+                        inBufferRx += 4
+                        if (inBufferRx >= RxMaxBuf) {inBufferRx = 0 }
+                    }
+//                    aux++
+//                    aux%=480
+//                    Log.e("Measure", "TASK took for buffer sinwave: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
                 }
 //                Log.e("Measure", "TASK took : " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
             }
         }
-        thread(start = true, priority = THREAD_PRIORITY_AUDIO) //THREAD_PRIORITY_AUDIO
+        thread(start = true, priority = 5) //THREAD_PRIORITY_AUDIO
         {
-            Log.e("INICIO", "TASK Mixer\n")
+            var auxBin=0
             while (power == 1) {
-
-                if(inBufferRx!=outBufferRx) {
-
-                    addAudioTrack()
-                    inBufferPlay++
-                    if (inBufferPlay == RxMaxBuf) inBufferPlay = 0
-                    outBufferRx+=4
-                    if (outBufferRx >= RxMaxBuf) outBufferRx = 0
+//                Thread.sleep(0,10)
+                var auxbufout = outBufferPlay
+                if (((inBufferPlay+480) > auxbufout ) && (inBufferPlay < auxbufout)) {
+                    Log.e("ERROR", "ESTOY ALCANZANDO EL BUFFER PLAY\n")
+//                            Log.e("ERROR", "$inBufferRx $outBufferRx\n")
                 }
-                else{
-                    Thread.sleep(1)
+                else {
+                    auxBin=inBufferRx
+                    if (auxBin != outBufferRx) {
+                        addAudioTrack()
+                        contadorPlayin++
+                        outBufferRx += 4
+                        if (outBufferRx >= RxMaxBuf) outBufferRx = 0
+                        inBufferPlay++
+                        if (inBufferPlay == RxMaxBuf) inBufferPlay = 0
+                    }
                 }
-
+//                if (inBufferPlay > outBufferPlay + 999) {
+//                    check_buton()
+//                    prueba = mAudioTrack.write(bufferPlay, outBufferPlay, 999,AudioTrack.WRITE_BLOCKING)
+//                    contador += prueba
+//                    outBufferPlay += 999
+//
+//                } else {
+//                    if (inBufferPlay == 0 && RxMaxBuf - outBufferPlay < 999) {
+//                        prueba =
+//                            mAudioTrack.write(bufferPlay, outBufferPlay, RxMaxBuf - outBufferPlay,AudioTrack.WRITE_BLOCKING)
+//                        contador += prueba
+//                        outBufferPlay = 0
+//
+//                    }
+//                }
             }
         }
         thread(start = true, priority = THREAD_PRIORITY_AUDIO) //THREAD_PRIORITY_AUDIO
         {
-            Log.e("INICIO", "TASK Play\n")
-            while (power==1){
-                check_buton()
-                if(inBufferPlay!=outBufferPlay) {
-                    if(inBufferPlay<outBufferPlay){
-                        mAudioTrack.write(bufferPlay, outBufferPlay, RxMaxBuf-outBufferPlay)
-                        outBufferPlay=0
-                        mAudioTrack.write(bufferPlay, outBufferPlay, inBufferPlay)
-                        outBufferPlay=inBufferPlay
+            var prueba:Int=0
+            var auxBin=0
+            while (power == 1) {
+                auxBin=inBufferPlay
+                if (auxBin > outBufferPlay + 480 && outBufferPlay < RxMaxBuf-480) {
+                    check_buton()
+                    prueba = mAudioTrack.write(bufferPlay, outBufferPlay, 480,AudioTrack.WRITE_BLOCKING)
+                    contador += prueba
+                    outBufferPlay += 480
+
+                } else {
+                    if (auxBin < outBufferPlay && RxMaxBuf - outBufferPlay < 480) {
+                        prueba =
+                            mAudioTrack.write(bufferPlay, outBufferPlay, RxMaxBuf - outBufferPlay,AudioTrack.WRITE_BLOCKING)
+                        contador += prueba
+                        outBufferPlay = 0
 
                     }
-                    else{
-                        mAudioTrack.write(bufferPlay, outBufferPlay, inBufferPlay-outBufferPlay)
-                        outBufferPlay=inBufferPlay
+                    if((auxBin < outBufferPlay && RxMaxBuf - outBufferPlay > 480)){
+                        prueba = mAudioTrack.write(bufferPlay, outBufferPlay, 480,AudioTrack.WRITE_BLOCKING)
+                        contador += prueba
+                        outBufferPlay += 480
                     }
+
                 }
-                Thread.sleep(2)
+            }
+        }
+        thread(start = true, priority = THREAD_PRIORITY_AUDIO) //THREAD_PRIORITY_AUDIO
+        {
+            var heaadpos=0
+            while(power==1){
+                Thread.sleep(10000)
+
+                val asd=bufferPlay.copyOf(RxMaxBuf)
+                val asdrx=bufferRx.copyOf(RxMaxBuf)
+                Log.e("Size", "playbackHeadPosition: "+ (mAudioTrack.playbackHeadPosition-heaadpos)+ "\n")
+                Thread.sleep(10)
+                Log.e("Size", "playbackHeadPosition despues de sleep: "+ (mAudioTrack.playbackHeadPosition)+ "\n")
+                heaadpos=mAudioTrack.playbackHeadPosition
+                Log.e("CUENTA", "Muestras Cargadas en AudioTrack $contador \n")
+                Log.e("CUENTA", "Muestras Cargadas en BufferPlay $contadorPlayin \n")
             }
         }
 
