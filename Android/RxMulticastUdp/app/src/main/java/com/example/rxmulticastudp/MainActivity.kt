@@ -10,17 +10,23 @@ import kotlinx.android.synthetic.main.activity_main.*
 import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.MulticastSocket
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
     private val power = 1
-
+    var cuentaRx=0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         rxRcv().execute()
-
+        thread(start = true, priority = 5){ //THREAD_PRIORITY_AUDIO
+            while (power==1){
+                Thread.sleep(5000)
+                Log.e("MEDIDA", "TOTAL $cuentaRx \n")
+            }
+        } //Hilo para revizar los Cheklist de los canales
 
     }
 
@@ -46,15 +52,29 @@ class MainActivity : AppCompatActivity() {
                 logId.append("Esperando Recepcion\n")
 
                 var datoCrudo=ByteArray(3840*2)
+//                var anterior=0
+//                var total=0
+//                var startTime = System.nanoTime()
                 while (power == 1) {
 
-                        datoCrudo = receive(s)
 
-                        var startTime = System.nanoTime()
-                        datoCrudo = receive(s)
-                        logId.append("dato" + datoCrudo[0] + datoCrudo[1]+"\n")
-                        Log.e("Measure", "TASK took for " + ((System.nanoTime() - startTime) / 1000000) + "mS\n")
-
+                    datoCrudo = receive(s)
+                    cuentaRx++
+//                    val nuevo = (datoCrudo[0].toShort() + (datoCrudo[1].toInt() shl 8))
+//                    if(nuevo != anterior+1) {
+//                        total++
+////                        logId.append("dato N° $nuevo Cuenta N° $cuentaRx y $total\n")
+////                      Log.e("Measure", "TASK took for " + ((System.nanoTime() - startTime) / 1000000) + "mS\n" )
+//                    }
+//                    anterior=nuevo
+//                    if(cuentaRx==1000){
+//                        startTime = System.nanoTime()
+//                        logId.append("dato N° $nuevo Cuenta N° $cuentaRx y $total\n")
+//                    }
+//                    if(cuentaRx==4000){
+//                        Log.e("Measure", "TASK took for " + ((System.nanoTime() - startTime) / 1000000) + "mS\n" )
+//                        logId.append("dato N° $nuevo Cuenta N° $cuentaRx y $total\n")
+//                    }
                 }
             }
             return "terminamo"
@@ -72,7 +92,7 @@ class MainActivity : AppCompatActivity() {
     //s:MulticastSocket
     fun receive(s: MulticastSocket):ByteArray {
         // get their responses!
-        val buf:ByteArray = ByteArray(3840*2)
+        val buf:ByteArray = ByteArray(480*2)
         val recv = DatagramPacket(buf, buf.size)
         s.receive(recv);
         return buf  //packetAsString
