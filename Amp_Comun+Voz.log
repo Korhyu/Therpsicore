@@ -2,21 +2,19 @@ Circuit: * D:\Proyecto_Final\Therpsicore\Amp_Comun+Voz.asc
 
 Direct Newton iteration for .op point succeeded.
 
-Date: Tue Jan 12 16:47:34 2021
-Total elapsed time: 0.801 seconds.
+Date: Fri Jan 15 16:21:31 2021
+Total elapsed time: 0.217 seconds.
 
 tnom = 27
 temp = 27
-method = modified trap
-totiter = 80034
-traniter = 80028
-tranpoints = 40015
-accept = 26737
-rejected = 13278
-matrix size = 58
-fillins = 60
+method = trap
+totiter = 6
+traniter = 0
+tranpoints = 0
+accept = 0
+rejected = 0
+matrix size = 66
+fillins = 73
 solver = Normal
-Thread vector: 6.0/3.5[3] 3.1/2.0[3] 0.2/0.7[1] 0.4/1.5[1]  2592/500
-Matrix Compiler1: 6.07 KB object code size  2.0/0.8/[0.5]
-Matrix Compiler2: 6.74 KB object code size  0.7/0.8/[0.6]
-
+Matrix Compiler1:     412 opcodes
+Matrix Compiler2: 8.03 KB object code size
