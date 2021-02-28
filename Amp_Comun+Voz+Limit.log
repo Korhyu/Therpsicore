@@ -1,0 +1,24 @@
+Circuit: * C:\Users\Lucas\Downloads\Grupo_3\consolidado\Amp_Comun+Voz+Limit.asc
+
+WARNING: Less than two connections to node N001.  This node is used by D2.
+WARNING: Less than two connections to node N024.  This node is used by D4.
+Direct Newton iteration for .op point succeeded.
+
+Date: Mon Feb 15 16:28:18 2021
+Total elapsed time: 15.344 seconds.
+
+tnom = 27
+temp = 27
+method = modified trap
+totiter = 766195
+traniter = 766163
+tranpoints = 232295
+accept = 165319
+rejected = 66976
+matrix size = 76
+fillins = 79
+solver = Normal
+Thread vector: 10.6/7.7[4] 6.9/3.9[4] 0.6/2.0[1] 0.8/3.1[1]  2592/500
+Matrix Compiler1: 7.94 KB object code size  4.8/2.5/[1.2]
+Matrix Compiler2: 8.78 KB object code size  1.9/2.5/[1.0]
+
